@@ -470,7 +470,7 @@ final class BrowserProfileStore: ObservableObject {
         guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             return nil
         }
-        let bundleId = Bundle.main.bundleIdentifier ?? "cmux"
+        let bundleId = Bundle.main.bundleIdentifier ?? "jmux"
         let namespace = BrowserHistoryStore.normalizedBrowserHistoryNamespaceForBundleIdentifier(bundleId)
         let profilesDir = appSupport
             .appendingPathComponent(namespace, isDirectory: true)
@@ -902,11 +902,11 @@ enum BrowserUserAgentSettings {
 }
 
 func normalizedBrowserHistoryNamespace(bundleIdentifier: String) -> String {
-    if bundleIdentifier.hasPrefix("com.cmuxterm.app.debug.") {
-        return "com.cmuxterm.app.debug"
+    if bundleIdentifier.hasPrefix("com.jmux.app.debug.") {
+        return "com.jmux.app.debug"
     }
-    if bundleIdentifier.hasPrefix("com.cmuxterm.app.staging.") {
-        return "com.cmuxterm.app.staging"
+    if bundleIdentifier.hasPrefix("com.jmux.app.staging.") {
+        return "com.jmux.app.staging"
     }
     return bundleIdentifier
 }
@@ -1508,7 +1508,7 @@ final class BrowserHistoryStore: ObservableObject {
         guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             return nil
         }
-        let bundleId = Bundle.main.bundleIdentifier ?? "cmux"
+        let bundleId = Bundle.main.bundleIdentifier ?? "jmux"
         let namespace = normalizedBrowserHistoryNamespace(bundleIdentifier: bundleId)
         let dir = appSupport.appendingPathComponent(namespace, isDirectory: true)
         return dir.appendingPathComponent("browser_history.json", isDirectory: false)
@@ -1730,7 +1730,7 @@ final class BrowserPortalAnchorView: NSView {
 
 @MainActor
 final class BrowserPanel: Panel, ObservableObject {
-    private static let remoteLoopbackProxyAliasHost = "cmux-loopback.localtest.me"
+    private static let remoteLoopbackProxyAliasHost = "jmux-loopback.localtest.me"
     private static let remoteLoopbackHosts: Set<String> = [
         "localhost",
         "127.0.0.1",

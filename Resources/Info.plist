@@ -44,9 +44,9 @@
 	<key>NSMainStoryboardFile</key>
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>A program running within cmux would like to use your microphone.</string>
+	<string>A program running within jmux would like to use your microphone.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>A program running within cmux would like to use your camera.</string>
+	<string>A program running within jmux would like to use your camera.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -124,9 +124,9 @@
 		</dict>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.cmux.sidebar-tab-reorder</string>
+			<string>com.jmux.sidebar-tab-reorder</string>
 			<key>UTTypeDescription</key>
-			<string>cmux Sidebar Tab Reorder</string>
+			<string>jmux Sidebar Tab Reorder</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
@@ -139,7 +139,7 @@
 		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
-			<key>cmux-loopback.localtest.me</key>
+			<key>jmux-loopback.localtest.me</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
@@ -151,9 +151,9 @@
 	<key>SUAutomaticallyUpdate</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>SUFeedURL</key>
-	<string>https://github.com/manaflow-ai/cmux/releases/latest/download/appcast.xml</string>
+	<string></string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
 	<key>SUSendProfileInfo</key>

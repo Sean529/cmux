@@ -61,11 +61,11 @@ enum SocketControlMode: String, CaseIterable, Identifiable {
 }
 
 enum SocketControlPasswordStore {
-    static let directoryName = "cmux"
+    static let directoryName = "jmux"
     static let fileName = "socket-control-password"
     private static let keychainMigrationDefaultsKey = "socketControlPasswordMigrationVersion"
     private static let keychainMigrationVersion = 1
-    private static let legacyKeychainService = "com.cmuxterm.app.socket-control"
+    private static let legacyKeychainService = "com.jmux.app.socket-control"
     private static let legacyKeychainAccount = "local-socket-password"
     private struct LazyKeychainFallbackCache {
         var hasLoaded = false
@@ -292,11 +292,11 @@ struct SocketControlSettings {
     static let allowSocketPathOverrideKey = "CMUX_ALLOW_SOCKET_OVERRIDE"
     static let socketPasswordEnvKey = "CMUX_SOCKET_PASSWORD"
     static let launchTagEnvKey = "CMUX_TAG"
-    static let baseDebugBundleIdentifier = "com.cmuxterm.app.debug"
-    private static let socketDirectoryName = "cmux"
+    static let baseDebugBundleIdentifier = "com.jmux.app.debug"
+    private static let socketDirectoryName = "jmux"
     private static let stableSocketFileName = "cmux.sock"
     private static let lastSocketPathFileName = "last-socket-path"
-    static let legacyStableDefaultSocketPath = "/tmp/cmux.sock"
+    static let legacyStableDefaultSocketPath = "/tmp/jmux.sock"
     static let legacyLastSocketPathFile = "/tmp/cmux-last-socket-path"
 
     static var stableDefaultSocketPath: String {
@@ -470,14 +470,14 @@ struct SocketControlSettings {
         if let taggedDebugPath = taggedDebugSocketPath(bundleIdentifier: bundleIdentifier, environment: [:]) {
             return taggedDebugPath
         }
-        if bundleIdentifier == "com.cmuxterm.app.nightly" {
+        if bundleIdentifier == "com.jmux.app.nightly" {
             return "/tmp/cmux-nightly.sock"
         }
         if isDebugLikeBundleIdentifier(bundleIdentifier) || isDebugBuild {
-            return "/tmp/cmux-debug.sock"
+            return "/tmp/jmux-debug.sock"
         }
         if isStagingBundleIdentifier(bundleIdentifier) {
-            return "/tmp/cmux-staging.sock"
+            return "/tmp/jmux-staging.sock"
         }
         return resolvedStableDefaultSocketPath(
             currentUserID: currentUserID,
@@ -529,11 +529,11 @@ struct SocketControlSettings {
 
     static func isDebugLikeBundleIdentifier(_ bundleIdentifier: String?) -> Bool {
         guard let bundleIdentifier else { return false }
-        return bundleIdentifier == "com.cmuxterm.app.debug"
-            || bundleIdentifier.hasPrefix("com.cmuxterm.app.debug.")
+        return bundleIdentifier == "com.jmux.app.debug"
+            || bundleIdentifier.hasPrefix("com.jmux.app.debug.")
     }
 
-    /// Tagged DEV builds have bundle IDs like `com.cmuxterm.app.debug.<tag>`.
+    /// Tagged DEV builds have bundle IDs like `com.jmux.app.debug.<tag>`.
     static func isTaggedDevBuild(bundleIdentifier: String? = Bundle.main.bundleIdentifier) -> Bool {
         guard let bundleIdentifier else { return false }
         return bundleIdentifier.hasPrefix("\(baseDebugBundleIdentifier).")
@@ -550,7 +550,7 @@ struct SocketControlSettings {
                 .replacingOccurrences(of: ".", with: "-")
                 .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
             if !slug.isEmpty {
-                return "/tmp/cmux-debug-\(slug).sock"
+                return "/tmp/jmux-debug-\(slug).sock"
             }
         }
 
@@ -567,13 +567,13 @@ struct SocketControlSettings {
               !tag.isEmpty else {
             return nil
         }
-        return "/tmp/cmux-debug-\(tag).sock"
+        return "/tmp/jmux-debug-\(tag).sock"
     }
 
     static func isStagingBundleIdentifier(_ bundleIdentifier: String?) -> Bool {
         guard let bundleIdentifier else { return false }
-        return bundleIdentifier == "com.cmuxterm.app.staging"
-            || bundleIdentifier.hasPrefix("com.cmuxterm.app.staging.")
+        return bundleIdentifier == "com.jmux.app.staging"
+            || bundleIdentifier.hasPrefix("com.jmux.app.staging.")
     }
 
     static func stableSocketDirectoryURL(fileManager: FileManager = .default) -> URL? {

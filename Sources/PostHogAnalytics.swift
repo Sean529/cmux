@@ -216,7 +216,7 @@ final class PostHogAnalytics {
     }
 
     nonisolated static func superProperties(infoDictionary: [String: Any]) -> [String: Any] {
-        var properties: [String: Any] = ["platform": "cmuxterm"]
+        var properties: [String: Any] = ["platform": "jmux"]
         properties.merge(versionProperties(infoDictionary: infoDictionary)) { _, new in new }
         return properties
     }

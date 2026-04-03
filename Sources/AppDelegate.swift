@@ -34,7 +34,7 @@ final class MainWindowHostingView<Content: View>: NSHostingView<Content> {
 }
 
 private enum CmuxThemeNotifications {
-    static let reloadConfig = Notification.Name("com.cmuxterm.themes.reload-config")
+    static let reloadConfig = Notification.Name("com.jmux.themes.reload-config")
 }
 
 func isCommandPaletteFocusStealingTerminalOrBrowserResponder(_ responder: NSResponder) -> Bool {
@@ -2349,11 +2349,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var sessionAutosaveTickInFlight = false
     private var sessionAutosaveDeferredRetryPending = false
     private let sessionPersistenceQueue = DispatchQueue(
-        label: "com.cmuxterm.app.sessionPersistence",
+        label: "com.jmux.app.sessionPersistence",
         qos: .utility
     )
     private nonisolated static let launchServicesRegistrationQueue = DispatchQueue(
-        label: "com.cmuxterm.app.launchServicesRegistration",
+        label: "com.jmux.app.launchServicesRegistration",
         qos: .utility
     )
     private nonisolated static func enqueueLaunchServicesRegistrationWork(_ work: @escaping @Sendable () -> Void) {
@@ -12084,7 +12084,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 @MainActor
 final class MenuBarExtraController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
-    private let menu = NSMenu(title: "cmux")
+    private let menu = NSMenu(title: "jmux")
     private let notificationStore: TerminalNotificationStore
     private let onShowNotifications: () -> Void
     private let onOpenNotification: (TerminalNotification) -> Void
@@ -12136,7 +12136,7 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
             button.imagePosition = .imageOnly
             button.imageScaling = .scaleProportionallyDown
             button.image = MenuBarIconRenderer.makeImage(unreadCount: 0)
-            button.toolTip = "cmux"
+            button.toolTip = "jmux"
         }
 
         notificationsCancellable = notificationStore.$notifications
@@ -12240,7 +12240,7 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
         if let button = statusItem.button {
             button.image = MenuBarIconRenderer.makeImage(unreadCount: displayedUnreadCount)
             button.toolTip = displayedUnreadCount == 0
-                ? "cmux"
+                ? "jmux"
                 : displayedUnreadCount == 1
                     ? "cmux: " + String(localized: "statusMenu.tooltip.unread.one", defaultValue: "1 unread notification")
                     : "cmux: " + String(localized: "statusMenu.tooltip.unread.other", defaultValue: "\(displayedUnreadCount) unread notifications")

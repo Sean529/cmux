@@ -1852,7 +1852,7 @@ enum RemoteLoopbackHTTPResponseRewriter {
 private final class WorkspaceRemoteDaemonProxyTunnel {
     private final class ProxySession {
         private static let maxHandshakeBytes = 64 * 1024
-        private static let remoteLoopbackProxyAliasHost = "cmux-loopback.localtest.me"
+        private static let remoteLoopbackProxyAliasHost = "jmux-loopback.localtest.me"
 
         private enum HandshakeProtocol {
             case undecided
@@ -4171,7 +4171,7 @@ final class WorkspaceRemoteSessionController {
             create: true
         )
         let cacheRoot = appSupportRoot
-            .appendingPathComponent("cmux", isDirectory: true)
+            .appendingPathComponent("jmux", isDirectory: true)
             .appendingPathComponent("remote-daemons", isDirectory: true)
         try fileManager.createDirectory(at: cacheRoot, withIntermediateDirectories: true)
         return cacheRoot

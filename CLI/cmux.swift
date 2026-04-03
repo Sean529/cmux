@@ -529,9 +529,9 @@ enum CLIIDFormat: String {
 }
 
 enum SocketPasswordResolver {
-    private static let service = "com.cmuxterm.app.socket-control"
+    private static let service = "com.jmux.app.socket-control"
     private static let account = "local-socket-password"
-    private static let directoryName = "cmux"
+    private static let directoryName = "jmux"
     private static let fileName = "socket-control-password"
 
     static func resolve(explicit: String?, socketPath: String) -> String? {
@@ -591,7 +591,7 @@ enum SocketPasswordResolver {
         }
 
         let candidate = URL(fileURLWithPath: socketPath).lastPathComponent
-        let prefixes = ["cmux-debug-", "cmux-"]
+        let prefixes = ["jmux-debug-", "cmux-"]
         for prefix in prefixes {
             guard candidate.hasPrefix(prefix), candidate.hasSuffix(".sock") else { continue }
             let start = candidate.index(candidate.startIndex, offsetBy: prefix.count)
@@ -660,12 +660,12 @@ private enum CLISocketPathSource {
 }
 
 private enum CLISocketPathResolver {
-    private static let appSupportDirectoryName = "cmux"
-    private static let stableSocketFileName = "cmux.sock"
+    private static let appSupportDirectoryName = "jmux"
+    private static let stableSocketFileName = "jmux.sock"
     private static let lastSocketPathFileName = "last-socket-path"
-    static let legacyDefaultSocketPath = "/tmp/cmux.sock"
-    private static let fallbackSocketPath = "/tmp/cmux-debug.sock"
-    private static let stagingSocketPath = "/tmp/cmux-staging.sock"
+    static let legacyDefaultSocketPath = "/tmp/jmux.sock"
+    private static let fallbackSocketPath = "/tmp/jmux-debug.sock"
+    private static let stagingSocketPath = "/tmp/jmux-staging.sock"
     private static let legacyLastSocketPathFile = "/tmp/cmux-last-socket-path"
 
     static var defaultSocketPath: String {
@@ -708,7 +708,7 @@ private enum CLISocketPathResolver {
 
         if let tag = normalized(environment["CMUX_TAG"]) {
             let slug = sanitizeTagSlug(tag)
-            candidates.append("/tmp/cmux-debug-\(slug).sock")
+            candidates.append("/tmp/jmux-debug-\(slug).sock")
             candidates.append("/tmp/cmux-\(slug).sock")
         }
 
@@ -1273,7 +1273,7 @@ struct CMUXCLI {
             return nil
         }
         guard let hinted = normalizedEnvValue(raw),
-              hinted.hasPrefix("/tmp/cmux-debug"),
+              hinted.hasPrefix("/tmp/jmux-debug"),
               hinted.hasSuffix(".sock"),
               pathIsSocket(hinted) else {
             return nil
@@ -1292,9 +1292,9 @@ struct CMUXCLI {
         if let hinted = debugSocketPathFromHintFile() {
             return hinted
         }
-        return "/tmp/cmux-debug.sock"
+        return "/tmp/jmux-debug.sock"
 #else
-        return "/tmp/cmux.sock"
+        return "/tmp/jmux.sock"
 #endif
     }
 
@@ -7330,10 +7330,10 @@ struct CMUXCLI {
         return true
     }
 
-    private static let cmuxThemeOverrideBundleIdentifier = "com.cmuxterm.app"
+    private static let cmuxThemeOverrideBundleIdentifier = "com.jmux.app"
     private static let cmuxThemesBlockStart = "# cmux themes start"
     private static let cmuxThemesBlockEnd = "# cmux themes end"
-    private static let cmuxThemesReloadNotificationName = "com.cmuxterm.themes.reload-config"
+    private static let cmuxThemesReloadNotificationName = "com.jmux.themes.reload-config"
 
     private struct ThemeSelection {
         let rawValue: String?

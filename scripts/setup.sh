@@ -58,7 +58,7 @@ else
         echo "==> Building GhosttyKit.xcframework (this may take a few minutes)..."
         (
             cd ghostty
-            zig build -Demit-xcframework=true -Dxcframework-target=universal -Doptimize=ReleaseFast
+            zig build -Demit-xcframework=true -Dxcframework-target=universal -Doptimize=ReleaseFast -Dversion-string=1.3.2
         )
         # Stamp the build output with the SHA it was built from
         echo "$GHOSTTY_SHA" > "$LOCAL_SHA_STAMP"
