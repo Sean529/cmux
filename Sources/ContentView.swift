@@ -9872,6 +9872,7 @@ struct VerticalTabsSidebar: View {
     let onSendFeedback: () -> Void
     @EnvironmentObject var tabManager: TabManager
     @EnvironmentObject var notificationStore: TerminalNotificationStore
+    @ObservedObject var daemonManager: LocalDaemonManager = .shared
     @Binding var selection: SidebarSelection
     @Binding var selectedTabIds: Set<UUID>
     @Binding var lastSidebarSelectionIndex: Int?
@@ -9997,6 +9998,13 @@ struct VerticalTabsSidebar: View {
                             }
                         }
                         .padding(.vertical, 8)
+
+                        if !daemonManager.detachedSessions.isEmpty {
+                            SidebarDetachedSessionsSection(
+                                sessions: daemonManager.detachedSessions,
+                                tabManager: tabManager
+                            )
+                        }
 
                         SidebarEmptyArea(
                             rowSpacing: tabRowSpacing,
@@ -12262,6 +12270,171 @@ private struct SidebarEmptyArea: View {
         }
         guard indicator.edge == .bottom, let lastTabId = tabManager.tabs.last?.id else { return false }
         return indicator.tabId == lastTabId
+    }
+}
+
+// MARK: - Detached Daemon Sessions
+
+/// Lightweight value wrapper for a detached daemon session dictionary, providing
+/// `Identifiable` conformance for SwiftUI `ForEach`.
+private struct DetachedSessionItem: Identifiable {
+    let id: String
+    let raw: [String: Any]
+
+    init(_ dict: [String: Any]) {
+        self.id = dict["session_id"] as? String ?? UUID().uuidString
+        self.raw = dict
+    }
+}
+
+private struct SidebarDetachedSessionsSection: View {
+    let sessions: [[String: Any]]
+    let tabManager: TabManager
+
+    private var items: [DetachedSessionItem] {
+        sessions.map { DetachedSessionItem($0) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header
+            HStack(spacing: 4) {
+                Image(systemName: "terminal")
+                    .font(.system(size: 9, weight: .semibold))
+                Text(String(localized: "sidebar.detachedSessions.header", defaultValue: "Detached Sessions"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .textCase(.uppercase)
+                Text("\(sessions.count)")
+                    .font(.system(size: 9, weight: .semibold))
+                    .monospacedDigit()
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.secondary.opacity(0.2))
+                    .clipShape(Capsule())
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            ForEach(items) { item in
+                SidebarDetachedSessionRow(session: item.raw, tabManager: tabManager)
+            }
+        }
+        .padding(.bottom, 4)
+    }
+}
+
+private struct SidebarDetachedSessionRow: View {
+    let session: [String: Any]
+    let tabManager: TabManager
+    @State private var isHovered = false
+    @State private var isReattaching = false
+
+    private var sessionID: String {
+        session["session_id"] as? String ?? ""
+    }
+
+    private var sessionName: String {
+        session["name"] as? String ?? sessionID
+    }
+
+    private var shellName: String {
+        guard let shell = session["shell"] as? String else { return "" }
+        return (shell as NSString).lastPathComponent
+    }
+
+    private var paneCount: Int {
+        session["pane_count"] as? Int ?? 1
+    }
+
+    private var createdAtText: String {
+        guard let raw = session["created_at"] as? String else { return "" }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        guard let date = formatter.date(from: raw) else { return "" }
+        let relative = RelativeDateTimeFormatter()
+        relative.unitsStyle = .abbreviated
+        return relative.localizedString(for: date, relativeTo: Date())
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(sessionName)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                HStack(spacing: 4) {
+                    if !shellName.isEmpty {
+                        Text(shellName)
+                    }
+                    if paneCount > 1 {
+                        Text(String.localizedStringWithFormat(
+                            String(localized: "sidebar.detachedSessions.panes", defaultValue: "%d panes"),
+                            paneCount
+                        ))
+                    }
+                    if !createdAtText.isEmpty {
+                        Text(createdAtText)
+                    }
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                reattachSession()
+            } label: {
+                if isReattaching {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(width: 14, height: 14)
+                } else {
+                    Image(systemName: "arrow.uturn.backward.circle")
+                        .font(.system(size: 14))
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(isHovered ? .primary : .secondary)
+            .help(String(localized: "sidebar.detachedSessions.reattach.tooltip", defaultValue: "Reattach session"))
+            .disabled(isReattaching)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .background(isHovered ? Color.secondary.opacity(0.1) : Color.clear)
+        .cornerRadius(4)
+        .padding(.horizontal, 4)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .accessibilityIdentifier("DetachedSessionRow.\(sessionID)")
+        .accessibilityLabel(Text(String.localizedStringWithFormat(
+            String(localized: "sidebar.detachedSessions.row.accessibilityLabel", defaultValue: "Detached session: %@"),
+            sessionName
+        )))
+    }
+
+    private func reattachSession() {
+        guard !isReattaching else { return }
+        isReattaching = true
+
+        let workspace = tabManager.addWorkspace(
+            title: sessionName,
+            select: true
+        )
+        workspace.daemonSessionID = sessionID
+
+        Task {
+            await workspace.reattachDaemonSessionIfNeeded()
+            await MainActor.run {
+                isReattaching = false
+            }
+        }
     }
 }
 

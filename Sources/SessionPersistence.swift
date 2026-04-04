@@ -341,6 +341,9 @@ struct SessionWorkspaceSnapshot: Codable, Sendable {
     var logEntries: [SessionLogEntrySnapshot]
     var progress: SessionProgressSnapshot?
     var gitBranch: SessionGitBranchSnapshot?
+    /// Daemon session ID for PTY reattach after workspace restore.
+    /// When present, the daemon still owns a live PTY for this workspace.
+    var daemonSessionID: String?
 }
 
 struct SessionTabManagerSnapshot: Codable, Sendable {

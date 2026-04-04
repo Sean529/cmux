@@ -305,7 +305,8 @@ extension Workspace {
             statusEntries: statusSnapshots,
             logEntries: logSnapshots,
             progress: progressSnapshot,
-            gitBranch: gitBranchSnapshot
+            gitBranch: gitBranchSnapshot,
+            daemonSessionID: daemonSessionID
         )
     }
 
@@ -354,6 +355,7 @@ extension Workspace {
         }
         progress = snapshot.progress.map { SidebarProgressState(value: $0.value, label: $0.label) }
         gitBranch = snapshot.gitBranch.map { SidebarGitBranchState(branch: $0.branch, isDirty: $0.isDirty) }
+        daemonSessionID = snapshot.daemonSessionID
 
         recomputeListeningPorts()
 
@@ -5582,6 +5584,136 @@ final class Workspace: Identifiable, ObservableObject {
     @Published var listeningPorts: [Int] = []
     @Published private(set) var activeRemoteTerminalSessionCount: Int = 0
     var surfaceTTYNames: [UUID: String] = [:]
+
+    /// Daemon session binding for persistent PTY (detach/reattach).
+    /// When set, the workspace's terminal is backed by a daemon-managed PTY
+    /// that survives workspace close and can be reattached on restore.
+    var daemonSessionBinding: DaemonSessionBinding?
+
+    /// FIFO bridge that routes daemon PTY I/O through a ghostty terminal surface.
+    /// Created during reattach and torn down when the workspace closes.
+    private var daemonPTYBridge: DaemonPTYBridge?
+
+    /// The daemon session ID associated with this workspace's terminal.
+    /// Persisted across app sessions to enable reattach after restart.
+    @Published var daemonSessionID: String?
+
+    /// Attempt to reattach to a daemon session if we have a saved session ID.
+    /// Called after session restore on app startup once the daemon is confirmed running.
+    /// Async to avoid blocking the main thread with socket I/O.
+    ///
+    /// Data flow after successful reattach:
+    ///   Output: daemon PTY → DaemonSessionBinding.readLoop → outputHandler
+    ///           → DaemonPTYBridge.writeOutput → output FIFO → `cat` → ghostty renderer
+    ///   Input:  ghostty key events → surface child stdin → `cat >` → input FIFO
+    ///           → DaemonPTYBridge.inputReadLoop → DaemonSessionBinding.sendInput → daemon PTY
+    func reattachDaemonSessionIfNeeded() async {
+        guard let sessionID = daemonSessionID else { return }
+        guard daemonSessionBinding == nil else { return }
+
+        let manager = LocalDaemonManager.shared
+        guard manager.isRunning else {
+            // Daemon not available — clear stale session ID.
+            daemonSessionID = nil
+            return
+        }
+
+        // Check if the session still exists in the daemon (off-main).
+        let sessions = await manager.listSessionsAsync()
+        let sessionExists = sessions.contains { ($0["session_id"] as? String) == sessionID }
+
+        guard sessionExists else {
+            // Session gone (daemon restarted or session was killed).
+            daemonSessionID = nil
+            return
+        }
+
+        // Use default terminal size; the surface will send a resize once it renders.
+        let cols = 80
+        let rows = 24
+
+        // Create the binding first (without output handler yet — we set it after creating the bridge).
+        let bridge: DaemonPTYBridge
+        let binding: DaemonSessionBinding
+
+        // Create binding with bridge's output handler wired up.
+        // The bridge and binding reference each other: the binding's output handler writes to the
+        // bridge, and the bridge's input reader calls binding.sendInput().
+        var capturedBridge: DaemonPTYBridge?
+        binding = DaemonSessionBinding(
+            sessionID: sessionID,
+            sessionName: sessionID,
+            outputHandler: { data in
+                capturedBridge?.writeOutput(data)
+            }
+        )
+        do {
+            bridge = try DaemonPTYBridge(sessionID: sessionID, binding: binding)
+        } catch {
+            #if DEBUG
+            dlog("Failed to create DaemonPTYBridge: \(error)")
+            #endif
+            daemonSessionID = nil
+            return
+        }
+        capturedBridge = bridge
+
+        // Identify the target pane and existing terminal panels BEFORE closing anything.
+        // Closing all panels in a pane can cause bonsplit to remove the pane entirely.
+        guard let paneId = bonsplitController.focusedPaneId ?? bonsplitController.allPaneIds.first else {
+            daemonSessionID = nil
+            bridge.teardown()
+            return
+        }
+
+        let existingTerminalPanelIds = panels.values
+            .compactMap { $0 as? TerminalPanel }
+            .map(\.id)
+
+        // Create the daemon-bridged terminal panel first, then close the old panels.
+        // This spawns `/bin/sh -c 'cat > input_fifo & cat output_fifo'` instead of
+        // the user's default shell.
+        guard let daemonPanel = newTerminalSurface(
+            inPane: paneId,
+            focus: true,
+            daemonBridgeCommand: bridge.surfaceCommand
+        ) else {
+            daemonSessionID = nil
+            bridge.teardown()
+            return
+        }
+
+        // Close the old session-restored terminal panels (which have local shells).
+        for panelId in existingTerminalPanelIds {
+            _ = closePanel(panelId, force: true)
+        }
+
+        // Activate the bridge (opens FIFOs) off-main, then attach to the daemon.
+        // Order matters: activate() must complete before attach() so the bridge
+        // can receive pty.replay data immediately. activate() blocks until the
+        // surface's child process (`cat`) opens the FIFO endpoints.
+        let attachResult: Bool = await Task.detached {
+            bridge.activate()
+            do {
+                try binding.attach(cols: cols, rows: rows)
+                return true
+            } catch {
+                return false
+            }
+        }.value
+
+        guard attachResult else {
+            daemonSessionID = nil
+            bridge.teardown()
+            // Close the daemon-bridged panel since we failed to attach.
+            _ = closePanel(daemonPanel.id, force: true)
+            return
+        }
+
+        daemonSessionBinding = binding
+        daemonPTYBridge = bridge
+    }
+
     private var remoteSessionController: WorkspaceRemoteSessionController?
     fileprivate var activeRemoteSessionControllerID: UUID?
     private var remoteLastErrorFingerprint: String?
@@ -7716,14 +7848,15 @@ final class Workspace: Identifiable, ObservableObject {
         inPane paneId: PaneID,
         focus: Bool? = nil,
         workingDirectory: String? = nil,
-        startupEnvironment: [String: String] = [:]
+        startupEnvironment: [String: String] = [:],
+        daemonBridgeCommand: String? = nil
     ) -> TerminalPanel? {
         let shouldFocusNewTab = focus ?? (bonsplitController.focusedPaneId == paneId)
         let previousFocusedPanelId = focusedPanelId
         let previousHostedView = focusedTerminalPanel?.hostedView
 
         let inheritedConfig = inheritedTerminalConfig(inPane: paneId)
-        let remoteTerminalStartupCommand = remoteTerminalStartupCommand()
+        let resolvedCommand = daemonBridgeCommand ?? remoteTerminalStartupCommand()
 
         // Create new terminal panel
         let newPanel = TerminalPanel(
@@ -7732,13 +7865,14 @@ final class Workspace: Identifiable, ObservableObject {
             configTemplate: inheritedConfig,
             workingDirectory: workingDirectory,
             portOrdinal: portOrdinal,
-            initialCommand: remoteTerminalStartupCommand,
+            initialCommand: resolvedCommand,
             additionalEnvironment: startupEnvironment
         )
         configureTerminalPanel(newPanel)
         panels[newPanel.id] = newPanel
         panelTitles[newPanel.id] = newPanel.displayTitle
-        if remoteTerminalStartupCommand != nil {
+        let isRemoteTerminal = daemonBridgeCommand == nil && resolvedCommand != nil
+        if isRemoteTerminal {
             trackRemoteTerminalSurface(newPanel.id)
         }
         seedTerminalInheritanceFontPoints(panelId: newPanel.id, configTemplate: inheritedConfig)
@@ -7754,7 +7888,7 @@ final class Workspace: Identifiable, ObservableObject {
         ) else {
             panels.removeValue(forKey: newPanel.id)
             panelTitles.removeValue(forKey: newPanel.id)
-            if remoteTerminalStartupCommand != nil {
+            if isRemoteTerminal {
                 untrackRemoteTerminalSurface(newPanel.id)
             }
             terminalInheritanceFontPointsByPanelId.removeValue(forKey: newPanel.id)
@@ -8060,12 +8194,32 @@ final class Workspace: Identifiable, ObservableObject {
     /// Tear down all panels in this workspace, freeing their Ghostty surfaces.
     /// Called before the workspace is removed from TabManager to ensure child
     /// processes receive SIGHUP even if ARC deallocation is delayed.
+    ///
+    /// When a daemon session binding is active, terminal panels are detached
+    /// (PTY keeps running in the daemon) rather than killed.
     func teardownAllPanels() {
+        // If we have a daemon session, tear down the FIFO bridge and detach from
+        // the daemon. The daemon keeps the PTY alive for later reattach.
+        // Bridge teardown must happen before binding detach so the surface's child
+        // process (`cat`) sees EOF and exits cleanly before we close the socket.
+        daemonPTYBridge?.teardown()
+        daemonPTYBridge = nil
+        if let binding = daemonSessionBinding {
+            binding.detach()
+            daemonSessionBinding = nil
+        }
+
         let panelEntries = Array(panels)
         for (panelId, panel) in panelEntries {
             panelSubscriptions.removeValue(forKey: panelId)
             PortScanner.shared.unregisterPanel(workspaceId: id, panelId: panelId)
-            panel.close()
+            // When a daemon session is active, use detach-aware close for terminal panels
+            // so the PTY continues in the daemon. Non-terminal panels close normally.
+            if daemonSessionID != nil, let terminalPanel = panel as? TerminalPanel {
+                terminalPanel.detachFromDaemon()
+            } else {
+                panel.close()
+            }
         }
 
         panels.removeAll(keepingCapacity: false)

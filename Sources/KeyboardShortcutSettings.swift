@@ -148,7 +148,7 @@ enum KeyboardShortcutSettings {
             case .jumpToUnread:
                 return StoredShortcut(key: "u", command: true, shift: true, option: false, control: false)
             case .triggerFlash:
-                return StoredShortcut(key: "h", command: true, shift: true, option: false, control: false)
+                return StoredShortcut(key: "h", command: true, shift: false, option: true, control: true)
             case .nextSidebarTab:
                 return StoredShortcut(key: "]", command: true, shift: false, option: false, control: true)
             case .prevSidebarTab:
@@ -162,13 +162,13 @@ enum KeyboardShortcutSettings {
             case .closeWorkspace:
                 return StoredShortcut(key: "w", command: true, shift: true, option: false, control: false)
             case .focusLeft:
-                return StoredShortcut(key: "←", command: true, shift: false, option: true, control: false)
+                return StoredShortcut(key: "h", command: true, shift: true, option: false, control: false)
             case .focusRight:
-                return StoredShortcut(key: "→", command: true, shift: false, option: true, control: false)
+                return StoredShortcut(key: "l", command: true, shift: true, option: false, control: false)
             case .focusUp:
-                return StoredShortcut(key: "↑", command: true, shift: false, option: true, control: false)
+                return StoredShortcut(key: "k", command: true, shift: true, option: false, control: false)
             case .focusDown:
-                return StoredShortcut(key: "↓", command: true, shift: false, option: true, control: false)
+                return StoredShortcut(key: "j", command: true, shift: true, option: false, control: false)
             case .splitRight:
                 return StoredShortcut(key: "d", command: true, shift: false, option: false, control: false)
             case .splitDown:

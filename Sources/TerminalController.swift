@@ -2084,6 +2084,20 @@ class TerminalController {
         case "workspace.remote.terminal_session_end":
             return v2Result(id: id, self.v2WorkspaceRemoteTerminalSessionEnd(params: params))
 
+        // Local daemon session management
+        case "session.local.status":
+            return v2Result(id: id, self.v2SessionLocalStatus(params: params))
+        case "session.local.list":
+            return v2Result(id: id, self.v2SessionLocalList(params: params))
+        case "session.local.new":
+            return v2Result(id: id, self.v2SessionLocalNew(params: params))
+        case "session.local.attach":
+            return v2Result(id: id, self.v2SessionLocalAttach(params: params))
+        case "session.local.detach":
+            return v2Result(id: id, self.v2SessionLocalDetach(params: params))
+        case "session.local.close":
+            return v2Result(id: id, self.v2SessionLocalClose(params: params))
+
         // Settings
         case "settings.open":
             return v2Result(id: id, self.v2SettingsOpen(params: params))
@@ -4024,6 +4038,115 @@ class TerminalController {
         }
 
         return result
+    }
+
+    // MARK: - Local Daemon Session Commands
+
+    // Socket command threading policy: session.local.* handlers run off-main.
+    // Parse/validate arguments off-main, call daemon RPC off-main, return directly.
+    // No v2MainSync needed — LocalDaemonManager static RPC methods are nonisolated.
+
+    private func v2SessionLocalStatus(params _: [String: Any]) -> V2CallResult {
+        // Probe daemon readiness off-main via nonisolated static method.
+        let running = LocalDaemonManager.probeSync()
+
+        if !running {
+            return .ok([
+                "daemon_running": false,
+                "version": NSNull(),
+            ])
+        }
+
+        // Fetch version off-main.
+        let versionResponse = LocalDaemonManager.rpcSync(method: "hello")
+        let version = (versionResponse?["result"] as? [String: Any])?["version"] as? String
+
+        return .ok([
+            "daemon_running": true,
+            "version": version as Any,
+        ])
+    }
+
+    private func v2SessionLocalList(params _: [String: Any]) -> V2CallResult {
+        // List sessions off-main via nonisolated static method.
+        let sessions = LocalDaemonManager.listSessionsSync()
+        return .ok(["sessions": sessions])
+    }
+
+    private func v2SessionLocalNew(params: [String: Any]) -> V2CallResult {
+        let name = v2RawString(params, "name")
+        let shell = v2RawString(params, "shell")
+        let cols = v2StrictInt(params, "cols")
+        let rows = v2StrictInt(params, "rows")
+
+        var rpcParams: [String: Any] = [:]
+        if let name { rpcParams["name"] = name }
+        if let shell { rpcParams["shell"] = shell }
+        if let cols { rpcParams["cols"] = cols }
+        if let rows { rpcParams["rows"] = rows }
+
+        // RPC off-main via nonisolated static method.
+        let response = LocalDaemonManager.rpcSync(method: "session.new", params: rpcParams)
+
+        guard let response, response["ok"] as? Bool == true else {
+            let message = (response?["error"] as? [String: Any])?["message"] as? String ?? "Failed to create session"
+            return .err(code: "daemon_error", message: message, data: nil)
+        }
+
+        return .ok(response["result"] ?? [:])
+    }
+
+    private func v2SessionLocalAttach(params: [String: Any]) -> V2CallResult {
+        guard let sessionId = v2RawString(params, "session_id") else {
+            return .err(code: "invalid_params", message: "Missing session_id", data: nil)
+        }
+
+        var rpcParams: [String: Any] = ["session_id": sessionId]
+        if let paneId = v2RawString(params, "pane_id") {
+            rpcParams["pane_id"] = paneId
+        }
+
+        // RPC off-main via nonisolated static method.
+        let response = LocalDaemonManager.rpcSync(method: "session.attach", params: rpcParams)
+
+        guard let response, response["ok"] as? Bool == true else {
+            let message = (response?["error"] as? [String: Any])?["message"] as? String ?? "Failed to attach to session"
+            return .err(code: "daemon_error", message: message, data: nil)
+        }
+
+        return .ok(response["result"] ?? [:])
+    }
+
+    private func v2SessionLocalDetach(params: [String: Any]) -> V2CallResult {
+        guard let sessionId = v2RawString(params, "session_id") else {
+            return .err(code: "invalid_params", message: "Missing session_id", data: nil)
+        }
+
+        // RPC off-main via nonisolated static method.
+        let response = LocalDaemonManager.rpcSync(method: "session.detach", params: ["session_id": sessionId])
+
+        guard let response, response["ok"] as? Bool == true else {
+            let message = (response?["error"] as? [String: Any])?["message"] as? String ?? "Failed to detach from session"
+            return .err(code: "daemon_error", message: message, data: nil)
+        }
+
+        return .ok(response["result"] ?? [:])
+    }
+
+    private func v2SessionLocalClose(params: [String: Any]) -> V2CallResult {
+        guard let sessionId = v2RawString(params, "session_id") else {
+            return .err(code: "invalid_params", message: "Missing session_id", data: nil)
+        }
+
+        // RPC off-main via nonisolated static method.
+        let response = LocalDaemonManager.rpcSync(method: "session.close", params: ["session_id": sessionId])
+
+        guard let response, response["ok"] as? Bool == true else {
+            let message = (response?["error"] as? [String: Any])?["message"] as? String ?? "Failed to close session"
+            return .err(code: "daemon_error", message: message, data: nil)
+        }
+
+        return .ok(response["result"] ?? [:])
     }
 
     private func v2WorkspaceAction(params: [String: Any]) -> V2CallResult {

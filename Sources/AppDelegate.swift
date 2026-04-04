@@ -2554,6 +2554,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         installShortcutMonitor()
         installShortcutDefaultsObserver()
         NSApp.servicesProvider = self
+
+        // Start local daemon for session persistence (non-blocking).
+        if !isRunningUnderXCTest {
+            Task { @MainActor in
+                await LocalDaemonManager.shared.ensureRunning()
+
+                // After daemon is running and sessions are restored, reattach
+                // any daemon sessions that were persisted across the app restart.
+                // Small delay to ensure session restore has completed.
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+                guard LocalDaemonManager.shared.isRunning else { return }
+                for context in self.mainWindowContexts.values {
+                    for workspace in context.tabManager.tabs {
+                        await workspace.reattachDaemonSessionIfNeeded()
+                    }
+                }
+
+                // Start periodic refresh of detached session tracking.
+                LocalDaemonManager.shared.startPeriodicRefresh()
+            }
+        }
+
 #if DEBUG
         UpdateTestSupport.applyIfNeeded(to: updateController.viewModel)
         if env["CMUX_UI_TEST_MODE"] == "1" {
@@ -10124,7 +10147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             return true
         }
 
-        // Pane focus navigation (defaults to Cmd+Option+Arrow, but can be customized to letter/number keys).
+        // Pane focus navigation (defaults to Cmd+Shift+HJKL, but can be customized to letter/number keys).
         if matchDirectionalShortcut(
             event: event,
             shortcut: KeyboardShortcutSettings.shortcut(for: .focusLeft),

@@ -181,6 +181,26 @@ final class TerminalPanel: Panel, ObservableObject {
         surface.teardownSurface()
     }
 
+    /// Detach from a daemon session instead of killing the PTY.
+    /// Called when a workspace with an active daemon session is closed —
+    /// the PTY keeps running in the daemon for later reattach.
+    func detachFromDaemon() {
+        surface.beginPortalCloseLifecycle(reason: "daemon.detach")
+#if DEBUG
+        let frame = String(format: "%.1fx%.1f", hostedView.frame.width, hostedView.frame.height)
+        let bounds = String(format: "%.1fx%.1f", hostedView.bounds.width, hostedView.bounds.height)
+        dlog(
+            "surface.panel.daemon_detach panel=\(id.uuidString.prefix(5)) " +
+            "workspace=\(workspaceId.uuidString.prefix(5)) frame=\(frame) bounds=\(bounds)"
+        )
+#endif
+        unfocus()
+        hostedView.setVisibleInUI(false)
+        TerminalWindowPortalRegistry.detach(hostedView: hostedView)
+        // Tear down the UI surface but NOT the underlying PTY — the daemon owns it.
+        surface.teardownSurface()
+    }
+
     func requestViewReattach() {
         viewReattachToken &+= 1
     }
