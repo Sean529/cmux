@@ -2,6 +2,37 @@
 
 All notable changes to cmux are documented here.
 
+## [0.64.0] - 2026-04-04
+
+### Added
+- Local daemon for tmux-like session detach/reattach — terminal sessions persist after closing the app and auto-restore on relaunch
+- Sidebar UI showing detached daemon sessions with one-click reattach
+- Daemon auto-start via launchd (sessions survive reboots)
+- Session disk persistence (daemon remembers sessions across daemon restarts)
+- Editable workspace descriptions (#2475)
+- Claude Binary Path setting — configure a custom path for the Claude CLI (#2514)
+- Keyboard shortcuts cheatsheet page
+- Localized tab context menu and alert strings (#1998)
+
+### Changed
+- Pane focus shortcuts changed to Cmd+Shift+H/J/K/L (was Cmd+Option+Arrow)
+- Open Browser shortcut moved to Cmd+Ctrl+Option+L to avoid conflict
+
+### Fixed
+- Suppress fallback text during IME composition (Korean, Japanese, Chinese input)
+- Fix split divider drags escaping to adjacent panes
+- Fix browser portal sync flickering during split drag
+- Fix external insertText escape handling
+- Fix paste from Raycast and other apps using alternate plain-text UTIs
+- Fix terminal clipboard rich text and image fallbacks
+- Fix macOS Tahoe glass window compatibility (#2459)
+- Fix CLI stealing app focus when running commands
+- Preserve symlink aliases for external file opens
+- Fix terminal Cmd scroll bug
+
+### Removed
+- Remove copy-on-select setting
+
 ## [0.63.1] - 2026-03-28
 
 ### Fixed
