@@ -192,7 +192,7 @@ enum KeyboardShortcutSettings {
             case .selectWorkspaceByNumber:
                 return StoredShortcut(key: "1", command: true, shift: false, option: false, control: false)
             case .openBrowser:
-                return StoredShortcut(key: "l", command: true, shift: true, option: false, control: false)
+                return StoredShortcut(key: "l", command: true, shift: false, option: true, control: true)
             case .toggleBrowserDeveloperTools:
                 // Safari default: Show Web Inspector.
                 return StoredShortcut(key: "i", command: true, shift: false, option: true, control: false)
