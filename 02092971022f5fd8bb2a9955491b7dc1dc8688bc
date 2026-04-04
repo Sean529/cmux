@@ -1,0 +1,49 @@
+daemon/local/rpc.go
+  b641dde90fea9857 1-229
+daemon/local/session.go
+  b641dde90fea9857 1-115,118,120,127-130,132-177,179-187,190-191,194-376,381-867
+Sources/TerminalController.swift
+  b641dde90fea9857 2087-2100,4043-4044,4049,4052-4059,4064-4070,4073-4087,4090-4108,4111-4124,4127-4140,4143-4151
+Sources/DaemonSessionBinding.swift
+  b641dde90fea9857 1,5-18,42-43,45,51-53,68-74,125-132,136-138,143,145,147-155,157-158,162-165,171-176,203,208,218,224,227-230,235-236,238,240-245,247-250,257,259-265,267-270,297,302,312,318,321-336,346-350,352-404,410-416,428-437,443-446,452,465,476,481-483,487-488,499,502-505,513-527,863-891
+Sources/SessionPersistence.swift
+  b641dde90fea9857 344-346
+daemon/local/cmd/cmuxd-local/main.go
+  b641dde90fea9857 1-28,35,37-58,70-72,96,100-101,104-120,122-125,127-134,136-140,142-148,150-277,279-431,433-463,465-513,515-554,557-603,605-695
+daemon/local/README.md
+  b641dde90fea9857 1-20,23-83
+Sources/AppDelegate.swift
+  b641dde90fea9857 2557-2560,2562-2570,2572-2579
+daemon/local/ringbuffer.go
+  b641dde90fea9857 1-65
+daemon/local/cmd/cmux-local/main.go
+  b641dde90fea9857 1-11,13-15,17-94,107-371,375,378-416,418-422,424-454,456-464,466-484,486-489,491-523
+Sources/Panels/TerminalPanel.swift
+  b641dde90fea9857 184-203
+Sources/Workspace.swift
+  b641dde90fea9857 308-309,358,5587-5592,5597-5602,5611-5620,5623-5634,5644-5645,5648-5650,5652,5706,5711,5715-5716,8197-8199,8207-8211,8216-8220,8222
+Sources/LocalDaemonManager.swift
+  b641dde90fea9857 1-11,13-21,23,43,58-60,63-67,74,76-78,81,83,93-94,96-118,121,126-132,134-136,181-184,188-197,199-203,212-213,217-222,230-232,237-244,250-258,276,291,368-370,408,411-438,441-530,549-550
+daemon/local/go.mod
+  b641dde90fea9857 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "02092971022f5fd8bb2a9955491b7dc1dc8688bc",
+  "prompts": {
+    "b641dde90fea9857": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28733170-1f4e-45f8-b5e1-341a6ef98bbd",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "AT",
+      "messages": [],
+      "total_additions": 3484,
+      "total_deletions": 231,
+      "accepted_lines": 3072,
+      "overriden_lines": 141
+    }
+  }
+}
