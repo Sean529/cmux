@@ -6285,11 +6285,14 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         keyEvent.text = nil
         keyEvent.composing = false
         _ = ghostty_surface_key(surface, keyEvent)
-        // Refresh ghostty's mouse position so quicklook_word uses current coordinates
-        // when Cmd is pressed while the pointer is stationary.
-        let point = convert(event.locationInWindow, from: nil)
-        ghostty_surface_mouse_pos(surface, point.x, bounds.height - point.y, modsFromEvent(event))
-        updateWordPathHover(cmdHeld: event.modifierFlags.contains(.command))
+        // 只在鼠标左键未按下时刷新鼠标位置，避免在选择拖拽期间（触控板手指
+        // 仍按着）按 Cmd 键时触发 Ghostty 的选择自动滚动逻辑。
+        // quicklook_word 的坐标刷新只在指针静止时才有意义。
+        if NSEvent.pressedMouseButtons & 0x1 == 0 {
+            let point = convert(event.locationInWindow, from: nil)
+            ghostty_surface_mouse_pos(surface, point.x, bounds.height - point.y, modsFromEvent(event))
+            updateWordPathHover(cmdHeld: event.modifierFlags.contains(.command))
+        }
     }
 
     private func modsFromEvent(_ event: NSEvent) -> ghostty_input_mods_e {

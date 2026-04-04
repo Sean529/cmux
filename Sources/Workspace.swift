@@ -6546,7 +6546,8 @@ final class Workspace: Identifiable, ObservableObject {
     }
 
     func panelNeedsConfirmClose(panelId: UUID, fallbackNeedsConfirmClose: Bool) -> Bool {
-        Self.resolveCloseConfirmation(
+        guard CloseTabWarningSettings.isEnabled() else { return false }
+        return Self.resolveCloseConfirmation(
             shellActivityState: panelShellActivityStates[panelId],
             fallbackNeedsConfirmClose: fallbackNeedsConfirmClose
         )
